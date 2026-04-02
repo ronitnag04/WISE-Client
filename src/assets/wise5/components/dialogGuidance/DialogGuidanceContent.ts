@@ -6,4 +6,7 @@ export interface DialogGuidanceContent extends ComponentContent, ComputerAvatarC
   feedbackRules: FeedbackRule[];
   itemId: string;
   version?: number;
+  useLLM?: boolean;
+  systemPrompt?: string;
+  llmModel?: string;
 }

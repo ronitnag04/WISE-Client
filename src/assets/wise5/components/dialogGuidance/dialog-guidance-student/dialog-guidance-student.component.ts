@@ -108,7 +108,9 @@ export class DialogGuidanceStudentComponent extends ComponentStudent {
       this.constraintService
     );
     this.initializeComputerAvatar();
-    this.pingCRaterEndpoint();
+    if (!this.component.content.useLLM) {
+      this.pingCRaterEndpoint();
+    }
   }
 
   private pingCRaterEndpoint(): void {
@@ -117,7 +119,9 @@ export class DialogGuidanceStudentComponent extends ComponentStudent {
 
   ngOnDestroy(): void {
     super.ngOnDestroy();
-    this.cRaterPingService.stopPinging(this.getItemId());
+    if (!this.component.content.useLLM) {
+      this.cRaterPingService.stopPinging(this.getItemId());
+    }
   }
 
   private getItemId(): string {
@@ -137,7 +141,11 @@ export class DialogGuidanceStudentComponent extends ComponentStudent {
 
   protected submitStudentResponse(response: string): void {
     this.addStudentDialogResponse(response);
-    this.submitToCRater(response);
+    if (this.component.content.useLLM) {
+      this.submitToLLM();
+    } else {
+      this.submitToCRater(response);
+    }
     this.studentDataChanged();
   }
 
@@ -230,6 +238,66 @@ export class DialogGuidanceStudentComponent extends ComponentStudent {
   cRaterErrorResponse() {
     this.hideWaitingForComputerResponse();
     this.saveButtonClicked();
+  }
+
+  private async submitToLLM(): Promise<void> {
+    this.showWaitingForComputerResponse();
+    const isFinalSubmit = this.hasMaxSubmitCount() && this.getNumberOfSubmitsLeft() === 1;
+    try {
+      let text: string;
+      if (isFinalSubmit) {
+        text = 'Thanks for chatting with me! You\'ve shared some really interesting ideas. Now take what we discussed and revise your explanation below.';
+      } else {
+        const messages = this.buildLLMMessages();
+        const model = this.component.content.llmModel || 'gpt-4o';
+        const response = await fetch('/api/chat-gpt', {
+          method: 'POST',
+          body: JSON.stringify({ messages, model })
+        });
+        const data = await response.json();
+        text = data.choices[0].message.content;
+      }
+      this.hideWaitingForComputerResponse();
+      this.submitButtonClicked();
+      this.addDialogResponse(new ComputerDialogResponse(text, [], new Date().getTime()));
+      if (this.hasMaxSubmitCountAndUsedAllSubmits()) {
+        this.disableStudentResponse();
+      }
+    } catch (error) {
+      this.cRaterErrorResponse();
+    }
+  }
+
+  private buildLLMMessages(): { role: string; content: string }[] {
+    const messages: { role: string; content: string }[] = [];
+    const initialResponse =
+      this.component.content.computerAvatarSettings?.initialResponse || '';
+    const questionContext = initialResponse.replace(/<[^>]*>/g, ' ').replace(/\{\{[^}]*\}\}/g, 'student');
+    const basePrompt =
+      this.component.content.systemPrompt || this.getDefaultSystemPrompt();
+    const systemContent = `${basePrompt}\n\nThe student is working on the following question/topic:\n${questionContext}`;
+    messages.push({ role: 'system', content: systemContent });
+    for (const r of this.responses) {
+      if (r.user === 'Student') {
+        messages.push({ role: 'user', content: r.text });
+      } else if (r.user === 'Computer') {
+        messages.push({ role: 'assistant', content: r.text });
+      }
+    }
+    return messages;
+  }
+
+  private getDefaultSystemPrompt(): string {
+    return `You are a Socratic science tutor. Follow these rules strictly:
+- NEVER tell the student whether their answer is correct or incorrect.
+- NEVER give the answer or any part of the answer directly.
+- NEVER guide the student too strongly toward the solution.
+- Ask probing questions that make the student examine their own reasoning.
+- If the student seems stuck, offer a hint as a question, not a statement.
+- Challenge assumptions — ask "why do you think that?" or "what evidence supports that?"
+- Keep responses concise (2-3 sentences max).
+- Use language appropriate for a middle or high school student.
+- Your goal is to force the student to THINK, not to make them feel good.`;
   }
 
   createComponentState(action: string): Promise<any> {
