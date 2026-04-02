@@ -14,6 +14,8 @@ export class AiChatInfo extends ComponentInfo {
         model: 'gpt-4',
         systemPrompt:
           'You are a teacher helping a student understand the greenhouse effect by using the example of the inside of a car heating up from the sun on a cold day. You do not tell them the correct answer but you do guide them to the correct answer. Also make sure they explain their reasoning. Limit your response to 100 words or less.',
+        intendedAnswer:
+          'The air inside the car will feel warmer than the outside air because sunlight passes through the windows, the interior absorbs energy and heats up, and the glass traps some of that heat. This process is similar in spirit to the greenhouse effect.',
         isComputerAvatarEnabled: true,
         computerAvatarSettings: {
           ids: [

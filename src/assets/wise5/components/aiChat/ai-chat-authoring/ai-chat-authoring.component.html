@@ -48,6 +48,20 @@
   [componentContent]="componentContent"
   (promptChangedEvent)="promptChanged($event)"
 />
+<p i18n>
+  Use the intended answer to record the response you expect students to reach. Students will not see
+  this text.
+</p>
+<mat-form-field class="system-prompt" appearance="fill">
+  <mat-label i18n>Intended Answer</mat-label>
+  <textarea
+    matInput
+    [(ngModel)]="componentContent.intendedAnswer"
+    (ngModelChange)="componentChanged()"
+    cdkTextareaAutosize
+  >
+  </textarea>
+</mat-form-field>
 <mat-checkbox
   color="primary"
   class="enable-computer-avatar-checkbox"

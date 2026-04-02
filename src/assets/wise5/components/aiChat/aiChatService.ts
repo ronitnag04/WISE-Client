@@ -21,6 +21,7 @@ export class AiChatService extends ComponentService {
     component.isComputerAvatarEnabled = false;
     component.model = 'gpt-4';
     component.systemPrompt = '';
+    component.intendedAnswer = '';
     return component;
   }
 
