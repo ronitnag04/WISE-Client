@@ -9,6 +9,7 @@ import { NotebookService } from '../../../services/notebookService';
 import { StudentAssetService } from '../../../services/studentAssetService';
 import { StudentDataService } from '../../../services/studentDataService';
 import { AiChatMessage } from '../AiChatMessage';
+import { AiChatFeedbackRule } from '../AiChatContent';
 import { AiChatService } from '../aiChatService';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AiChatComponent } from '../AiChatComponent';
@@ -102,7 +103,7 @@ export class AiChatStudentComponent extends ComponentStudent {
     this.scrollToBottom();
     try {
       const response = await this.aiChatService.sendChatMessage(
-        this.messages,
+        this.buildMessagesForChatApi(),
         this.componentContent.model
       );
       this.waitingForComputerResponse = false;
@@ -150,6 +151,37 @@ export class AiChatStudentComponent extends ComponentStudent {
         behavior: 'smooth'
       });
     }, 100);
+  }
+
+  private buildMessagesForChatApi(): AiChatMessage[] {
+    const rulesBlock = this.formatFeedbackRulesContext();
+    const systemContent = rulesBlock
+      ? `${this.componentContent.systemPrompt}\n\nThe following feedback rules describe ideas students may express and how you should guide responses. Apply them when the student's message matches or relates to a listed idea:\n\n${rulesBlock}`
+      : this.componentContent.systemPrompt;
+
+    let systemAugmented = false;
+    return this.messages.map((msg) => {
+      if (msg.role === 'system' && !systemAugmented) {
+        systemAugmented = true;
+        return new AiChatMessage('system', systemContent, msg.hidden);
+      }
+      return new AiChatMessage(msg.role, msg.content, msg.hidden);
+    });
+  }
+
+  private formatFeedbackRulesContext(): string {
+    const rules: AiChatFeedbackRule[] = this.componentContent.feedbackRules ?? [];
+    const parts = rules
+      .map((r) => ({
+        idea: (r.detectedIdea ?? '').trim(),
+        guidance: (r.responseGuidance ?? '').trim()
+      }))
+      .filter((r) => r.idea.length > 0 || r.guidance.length > 0)
+      .map(
+        (r, i) =>
+          `${i + 1}. Detected idea: ${r.idea || '(none specified)'}\n   Response guidance: ${r.guidance || '(none specified)'}`
+      );
+    return parts.join('\n\n');
   }
 }
 
