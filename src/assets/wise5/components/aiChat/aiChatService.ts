@@ -22,6 +22,7 @@ export class AiChatService extends ComponentService {
     component.model = 'gpt-4';
     component.systemPrompt = '';
     component.intendedAnswer = '';
+    component.feedbackRules = [];
     return component;
   }
 
